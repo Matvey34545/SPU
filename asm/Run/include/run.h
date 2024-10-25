@@ -1,0 +1,79 @@
+#ifndef RUN
+#define RUN
+
+#include <stdlib.h>
+
+#include "stack.h"
+
+struct Cmd
+{
+    unsigned int is_memory   : 1;
+    unsigned int is_register : 1;
+    unsigned int is_cnst     : 1;
+    unsigned int command     : 5;
+};
+
+struct ArgCommand
+{
+    unsigned int num_reg  : 4;
+    int cnst              : 28;
+};
+
+enum Command
+{
+    PUSH = 0,
+    ADD  = 1,
+    SID  = 2,
+    MUL  = 3,
+    DIV  = 4,
+    OUT  = 5,
+    IN   = 6,
+    HTL  = 7,
+    DUMP = 8,
+    JUMP = 9,
+    POP  = 10,
+    JB   = 11,
+    JBE  = 12,
+    JA   = 13,
+    JAE  = 14,
+    JE   = 15,
+    CALL = 16,
+    RESET= 17,
+    JNE  = 18,
+    LABEL= 19,
+};
+
+enum NumberRegister
+{
+    AX            = 0,
+    BX            = 1,
+    CX            = 2,
+    DX            = 3
+};
+
+struct RunFile
+{
+    int *ptr;
+    size_t size;
+};
+
+struct Processor
+{
+    int *num_reg;
+    int size_memory;
+    int *ptr_memory;
+};
+
+enum ErrorRead
+{
+    READ_ERROR_NO         = 0,
+    READ_ERROR_NO_FILE    = 1,
+    READ_ERROR_ALLOCATION = 2
+};
+
+ErrorStack run_exec_file(const RunFile *runfile);
+ErrorRead read_bynary(const char *filename, RunFile *runfile);
+
+
+
+#endif
