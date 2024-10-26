@@ -5,9 +5,10 @@
 #include "stack.h"
 
 static Command command_recognition(const RunFile *runfile, int ip);
-static int* address_search(const RunFile *runfile, int *ip, Processor *processor);
-static ErrorStack jump_if(int descriptor, int value, int *ip, bool (*comparison)(int, int));
-static ErrorStack operation_command(int descriptor, int *ip, int (*operation)(int, int));
+static int* address_search(const RunFile *runfile, Processor *processor);
+static ErrorExec jump_if(int descriptor, int value, int *ip, bool (*comparison)(int, int));
+static ErrorExec operation_command(int descriptor, int *ip, int (*operation)(int, int));
+static ErrorExec exec_command(Command command, const RunFile *runfile, Processor *processor);
 
 static bool jb(int a, int b);
 static bool jbe(int a, int b);
@@ -21,162 +22,167 @@ static int sid_operation(int a, int b);
 static int mul_operation(int a, int b);
 static int div_operation(int a, int b);
 
-ErrorStack run_exec_file(const RunFile *runfile)
+ErrorExec run_exec_file(const RunFile *runfile)
 {
     const int SIZE_MEMORY = 400;
     const int NUMBER_REG  = 4;
     const int SIZEBUFFER  = 100;
 
-    ErrorStack error = OK;
-
     int memory[SIZE_MEMORY] = {};
     int reg[NUMBER_REG]     = {};
 
-    Processor processor = {reg, SIZE_MEMORY, memory};
+    Processor processor = {reg, SIZE_MEMORY, memory, 0, 0, -1, 0};
 
-    int descriptor = create_stack(SIZEBUFFER FOR_DEBUG(, __INIT__, "descriptor"));
-    int adress = create_stack(SIZEBUFFER FOR_DEBUG(, __INIT__, "adress"));
+    processor.stck_descr = create_stack(SIZEBUFFER FOR_DEBUG(, __INIT__, "descriptor"));
+    processor.stck_adr_descr = create_stack(SIZEBUFFER FOR_DEBUG(, __INIT__, "adress"));
 
-    int ip = 0;
-    int temp = 0;
-    int return_address = 0;
-
-    while (ip < runfile->size)
+    while (processor.ip < runfile->size)
     {
-        int *value = NULL;
-        Command command = command_recognition(runfile, ip);
-
-        switch (command)
-        {
-
-            case PUSH:
-                value = address_search(runfile, &ip, &processor);
-                error = push_stack(descriptor, sizeof(int), value FOR_DEBUG(, __INIT__));
-                if (error != OK)
-                    return error;
-                break;
-
-            case POP:
-                value = address_search(runfile, &ip, &processor);
-                error = pop_stack(descriptor, sizeof(int), value FOR_DEBUG(, __INIT__));
-                if (error != OK)
-                    return error;
-                break;
-
-            case JUMP:
-                value = address_search(runfile, &ip, &processor);
-                ip = *value;
-                break;
-
-            case CALL:
-                return_address = ip + 2;
-                error = push_stack(adress, sizeof(int), &return_address FOR_DEBUG(, __INIT__));
-                if (error != OK)
-                    return error;
-
-                value = address_search(runfile, &ip, &processor);
-                ip = *value;
-                break;
-
-            case JB:
-                value = address_search(runfile, &ip, &processor);
-                error = jump_if(descriptor, *value, &ip, jb);
-                if (error != OK)
-                    return error;
-                break;
-
-            case JBE:
-                value = address_search(runfile, &ip, &processor);
-                error = jump_if(descriptor, *value, &ip, jbe);
-                if (error != OK)
-                    return error;
-                break;
-
-            case JA:
-                value = address_search(runfile, &ip, &processor);
-                error = jump_if(descriptor, *value, &ip, ja);
-                if (error != OK)
-                    return error;
-                break;
-
-            case JAE:
-                value = address_search(runfile, &ip, &processor);
-                error = jump_if(descriptor, *value, &ip, jae);
-                if (error != OK)
-                    return error;
-                break;
-
-            case JE:
-                value = address_search(runfile, &ip, &processor);
-                error = jump_if(descriptor, *value, &ip, je);
-                if (error != OK)
-                    return error;
-                break;
-
-            case JNE:
-                value = address_search(runfile, &ip, &processor);
-                error = jump_if(descriptor, *value, &ip, jne);
-                if (error != OK)
-                    return error;
-                break;
-
-            case ADD:
-                error = operation_command(descriptor, &ip, add_operation);
-                if (error != OK)
-                    return error;
-                break;
-
-            case SID:
-                error = operation_command(descriptor, &ip, sid_operation);
-                if (error != OK)
-                    return error;
-                break;
-
-            case MUL:
-                error = operation_command(descriptor, &ip, mul_operation);
-                if (error != OK)
-                    return error;
-                break;
-
-            case DIV:
-                error = operation_command(descriptor, &ip, div_operation);
-                if (error != OK)
-                    return error;
-                break;
-
-            case OUT:
-                error = pop_stack(descriptor, sizeof(int), &temp FOR_DEBUG(, __INIT__));
-                if (error != OK)
-                    return error;
-                printf("Answer: %d\n", temp);
-                ip++;
-                break;
-
-            case IN:
-                scanf("%d", &temp);
-                error = push_stack(descriptor, sizeof(int), &temp FOR_DEBUG(, __INIT__));
-                if (error != OK)
-                    return error;
-                ip++;
-                break;
-
-            case HTL:
-                return error;
-                break;
-
-            case RESET:
-                error = pop_stack(adress, sizeof(int), &ip FOR_DEBUG(, __INIT__));
-                 if (error != OK)
-                    return error;
-                break;
-
-            default:
-                return error;
-                break;
-        }
+        Command command = command_recognition(runfile, processor.ip);
+        ErrorExec error = exec_command(command, runfile, &processor);
+        if (error != EXEC_ERROR_NO)
+            return error;
     }
-    return OK;
+    return EXEC_ERROR_NO;
 }
+
+static ErrorExec exec_command(Command command, const RunFile *runfile, Processor *processor)
+{
+    int temp = 0;
+    int *value = NULL;
+    ErrorStack error_stack = OK;
+    ErrorExec  error       = EXEC_ERROR_NO;
+
+    switch (command)
+    {
+        case PUSH:
+            value = address_search(runfile, processor);
+            error_stack = push_stack(processor->stck_descr, sizeof(int), value FOR_DEBUG(, __INIT__));
+            if (error_stack != OK)
+                return EXEC_STACK_ERROR;
+            break;
+
+        case POP:
+            value = address_search(runfile, processor);
+            error_stack = pop_stack(processor->stck_descr, sizeof(int), value FOR_DEBUG(, __INIT__));
+            if (error_stack != OK)
+                return EXEC_STACK_ERROR;
+            break;
+
+        case JUMP:
+            value = address_search(runfile, processor);
+            processor->ip = *value;
+            break;
+
+        case JB:
+            value = address_search(runfile, processor);
+            error = jump_if(processor->stck_descr, *value, &processor->ip, jb);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case JBE:
+            value = address_search(runfile, processor);
+            error = jump_if(processor->stck_descr, *value, &processor->ip, jbe);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case JA:
+            value = address_search(runfile,processor);
+            error = jump_if(processor->stck_descr, *value, &processor->ip, ja);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case JAE:
+            value = address_search(runfile, processor);
+            error = jump_if(processor->stck_descr, *value, &processor->ip, jae);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case JE:
+            value = address_search(runfile, processor);
+            error = jump_if(processor->stck_descr, *value, &processor->ip, je);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case JNE:
+            value = address_search(runfile, processor);
+            error = jump_if(processor->stck_descr, *value, &processor->ip, jne);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case ADD:
+            error = operation_command(processor->stck_descr, &processor->ip, add_operation);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case SID:
+            error = operation_command(processor->stck_descr, &processor->ip, sid_operation);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case MUL:
+            error = operation_command(processor->stck_descr, &processor->ip, mul_operation);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case DIV:
+            error = operation_command(processor->stck_descr, &processor->ip, div_operation);
+            if (error != EXEC_ERROR_NO)
+                return error;
+            break;
+
+        case OUT:
+            error_stack = pop_stack(processor->stck_descr, sizeof(int), &temp FOR_DEBUG(, __INIT__));
+            if (error_stack != OK)
+                return EXEC_STACK_ERROR;
+            printf("Answer: %d\n", temp);
+            (processor->ip)++;
+            break;
+
+        case IN:
+            scanf("%d", &temp);
+            error_stack = push_stack(processor->stck_descr, sizeof(int), &temp FOR_DEBUG(, __INIT__));
+            if (error_stack != OK)
+                return EXEC_STACK_ERROR;
+            (processor->ip)++;
+            break;
+
+        case HTL:
+            return EXEC_END_RUN_FILE;
+            break;
+
+        case CALL:
+            processor->return_adress = processor->ip + 2;
+            error_stack = push_stack(processor->stck_adr_descr, sizeof(int), &processor->return_adress FOR_DEBUG(, __INIT__));
+            if (error_stack != OK)
+                return EXEC_STACK_ERROR;
+
+            value = address_search(runfile, processor);
+            processor->ip = *value;
+            break;
+
+        case RESET:
+            error_stack = pop_stack(processor->stck_adr_descr, sizeof(int), &processor->ip FOR_DEBUG(, __INIT__));
+            if (error_stack != OK)
+                return EXEC_STACK_ERROR;
+            break;
+
+        default:
+            return EXEC_NONE_COMMAND ;
+            break;
+    }
+    return EXEC_ERROR_NO;
+}
+
 
 static Command command_recognition(const RunFile *runfile, int ip)
 {
@@ -186,7 +192,7 @@ static Command command_recognition(const RunFile *runfile, int ip)
     return (Command) temp_command.command;
 }
 
-static int* address_search(const RunFile *runfile, int *ip, Processor *processor)
+static int* address_search(const RunFile *runfile, Processor *processor)
 {
     int arg_value = 0;
     Cmd temp_command = {};
@@ -194,10 +200,10 @@ static int* address_search(const RunFile *runfile, int *ip, Processor *processor
 
     static int arg_const = 0;
 
-    memcpy(&temp_command, runfile->ptr + *ip, sizeof(Cmd));
-    memcpy(&temp_arg, runfile->ptr + *ip + 1, sizeof(ArgCommand));
+    memcpy(&temp_command, runfile->ptr + processor->ip, sizeof(Cmd));
+    memcpy(&temp_arg, runfile->ptr + processor->ip + 1, sizeof(ArgCommand));
 
-    *ip += 2;
+    processor->ip += 2;
 
     if (temp_command.is_cnst)
         arg_value += temp_arg.cnst;
@@ -216,31 +222,31 @@ static int* address_search(const RunFile *runfile, int *ip, Processor *processor
     return &arg_const;
 }
 
-static ErrorStack jump_if(int descriptor, int value, int *ip, bool (*comparison)(int, int))
+static ErrorExec jump_if(int descriptor, int value, int *ip, bool (*comparison)(int, int))
 {
     int first_elem = 0;
     int second_elem = 0;
 
     ErrorStack error = pop_stack(descriptor, sizeof(int), &first_elem FOR_DEBUG(, __INIT__));
     if (error != OK)
-        return error;
+        return EXEC_STACK_ERROR;
 
     error = pop_stack(descriptor, sizeof(int), &second_elem FOR_DEBUG(, __INIT__));
     if (error != OK)
-        return error;
+        return EXEC_STACK_ERROR;
 
     error = push_stack(descriptor, sizeof(int), &second_elem FOR_DEBUG(, __INIT__));
     if (error != OK)
-        return error;
+        return EXEC_STACK_ERROR;
 
     error = push_stack(descriptor, sizeof(int), &first_elem FOR_DEBUG(, __INIT__));
     if (error != OK)
-        return error;
+        return EXEC_STACK_ERROR;
 
     if (comparison(first_elem, second_elem))
         *ip = value;
 
-    return OK;
+    return EXEC_ERROR_NO;
 }
 
 static bool jb(int a, int b)
@@ -285,7 +291,7 @@ static bool jne(int a, int b)
     return false;
 }
 
-static ErrorStack operation_command(int descriptor, int *ip, int (*operation)(int, int))
+static ErrorExec operation_command(int descriptor, int *ip, int (*operation)(int, int))
 {
     int first_elem = 0;
     int second_elem = 0;
@@ -294,16 +300,19 @@ static ErrorStack operation_command(int descriptor, int *ip, int (*operation)(in
 
     ErrorStack error = pop_stack(descriptor, sizeof(int), &first_elem FOR_DEBUG(, __INIT__));
     if (error != OK)
-        return error;
+        return EXEC_STACK_ERROR;
 
     error = pop_stack(descriptor, sizeof(int), &second_elem FOR_DEBUG(, __INIT__));
     if (error != OK)
-        return error;
+        return EXEC_STACK_ERROR;
 
     int res = operation(first_elem, second_elem);
 
     error = push_stack(descriptor, sizeof(int), &res FOR_DEBUG(, __INIT__));
-    return error;
+    if (error != OK)
+        return EXEC_STACK_ERROR;
+
+    return EXEC_ERROR_NO;
 }
 
 static int add_operation(int a, int b)

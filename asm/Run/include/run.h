@@ -43,14 +43,6 @@ enum Command
     LABEL= 19,
 };
 
-enum NumberRegister
-{
-    AX            = 0,
-    BX            = 1,
-    CX            = 2,
-    DX            = 3
-};
-
 struct RunFile
 {
     int *ptr;
@@ -62,17 +54,25 @@ struct Processor
     int *num_reg;
     int size_memory;
     int *ptr_memory;
+    int stck_descr;
+    int stck_adr_descr;
+    int return_adress;
+    int ip;
 };
 
-enum ErrorRead
+enum ErrorExec
 {
-    READ_ERROR_NO         = 0,
-    READ_ERROR_NO_FILE    = 1,
-    READ_ERROR_ALLOCATION = 2
+    EXEC_ERROR_NO         = 0,
+    EXEC_ERROR_NO_FILE    = 1,
+    EXEC_ERROR_ALLOCATION = 2,
+    EXEC_STACK_ERROR      = 3,
+    EXEC_END_RUN_FILE     = 4,
+    EXEC_NONE_COMMAND     = 5
 };
 
-ErrorStack run_exec_file(const RunFile *runfile);
-ErrorRead read_bynary(const char *filename, RunFile *runfile);
+
+ErrorExec run_exec_file(const RunFile *runfile);
+ErrorExec read_bynary(const char *filename, RunFile *runfile);
 
 
 
