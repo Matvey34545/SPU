@@ -5,30 +5,6 @@
 
 const int MIN_SIZE = 1000;
 
-enum Command
-{
-    PUSH = 0,
-    ADD  = 1,
-    SID  = 2,
-    MUL  = 3,
-    DIV  = 4,
-    OUT  = 5,
-    IN   = 6,
-    HTL  = 7,
-    DUMP = 8,
-    JUMP = 9,
-    POP  = 10,
-    JB   = 11,
-    JBE  = 12,
-    JA   = 13,
-    JAE  = 14,
-    JE   = 15,
-    CALL = 16,
-    RESET= 17,
-    JNE  = 18,
-    LABEL= 19,
-};
-
 struct Label
 {
     int number_str;
@@ -55,18 +31,43 @@ enum TypeArg
     JUMP_ARG     = 2
 };
 
-struct ExecInfoCmd
-{
-    const TypeArg type_arg;
-    const bool is_value;
-    Command num_command;
-};
-
 struct InfoCmd
 {
     const char* name;
     const int size;
-    ExecInfoCmd exec_info;
+    const TypeArg type_arg;
+    const bool is_value;
+};
+
+struct ExecInfoCmd
+{
+    const TypeArg type_arg;
+    const bool is_value;
+    
+
+
+enum Command
+{
+    PUSH = 0,
+    ADD  = 1,
+    SID  = 2,
+    MUL  = 3,
+    DIV  = 4,
+    OUT  = 5,
+    IN   = 6,
+    HTL  = 7,
+    DUMP = 8,
+    JUMP = 9,
+    POP  = 10,
+    JB   = 11,
+    JBE  = 12,
+    JA   = 13,
+    JAE  = 14,
+    JE   = 15,
+    CALL = 16,
+    RESET= 17,
+    JNE  = 18,
+    LABEL= 19,
 };
 
 enum NumberRegister
