@@ -210,6 +210,26 @@ ErrorStack destroy_stack(int descriptor)
     return OK;
 }
 
+ErrorStack dump_int_stack(int descriptor FOR_DEBUG(, Init init))
+{
+    stack_t *st = (stack_t*)find_elem(&Tree, &descriptor, comparison_with_descr);
+
+    CHECK_STACK(st, init);
+    FOR_HASH(CHECK_HASH(st);)
+
+    char* ptr = (char*)st->data;
+    int number_elements = st->size / (sizeof(int) + sizeof(size_t));
+
+    for (int i = 0; i < number_elements; i++)
+    {
+        printf("Number elem: %d\nValue: %d\n\n", i, *(int*)ptr);
+        ptr += sizeof(int) + sizeof(size_t);
+    }
+    CHECK_STACK(st, init);
+    FOR_HASH(assign_hash(st);)
+    return OK;
+}
+
 static ErrorStack stack_error(const stack_t *st)
 {
     if (st == NULL)

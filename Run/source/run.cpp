@@ -191,13 +191,19 @@ static ErrorExec exec_command(Command command, const RunFile *runfile, Processor
                 return error;
             break;
 
+        case DUMP:
+            error_stack = dump_int_stack(processor->stck_descr FOR_DEBUG(, __INIT__));
+            if (error_stack != OK)
+                return EXEC_STACK_ERROR;
+            processor->ip++;
+            break;
+
         default:
             return EXEC_NONE_COMMAND ;
             break;
     }
     return EXEC_ERROR_NO;
 }
-
 
 static Command command_recognition(const RunFile *runfile, int ip)
 {

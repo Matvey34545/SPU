@@ -1,6 +1,7 @@
 #ifndef DEBUG_STACK
 #define DEBUG_STACK
 
+#include "config.h"
 #include <assert.h>
 
 #ifdef NO_CANARY

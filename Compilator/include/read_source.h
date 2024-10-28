@@ -57,5 +57,6 @@ struct RunFile
 ErrorCompilation read_source(SourceStruct *cmp_file, const char* filename);
 ErrorCompilation read_command_line(int argc, const char * const *argv, Files *files);
 ErrorCompilation write_file(const char* filename, RunFile *run_file);
+const char* print_error(ErrorCompilation error);
 
 #endif

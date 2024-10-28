@@ -137,7 +137,6 @@ static int count_lines(const CmpFile *file, char sep, char coment_symbol)
         }
         number_symbol++;
     }
-    printf("NUMBER STRING: %d\n", number_string);
     return number_string;
 }
 
@@ -172,6 +171,32 @@ ErrorCompilation write_file(const char* filename, RunFile *run_file)
 
     fclose(fp);
     return COMP_ERROR_NO;
+}
+
+const char* print_error(ErrorCompilation error)
+{
+    #define DESCR_(e)     \
+        case e: return #e;\
+            break
+
+    switch(error)
+    {
+        DESCR_(COMP_ERROR_NULL_PTR);
+        DESCR_(COMP_ERROR_ALLOCATION);
+        DESCR_(COMP_ERROR_NO_FILE);
+        DESCR_(COMP_ERROR_FLAG);
+        DESCR_(COMP_FEW_ARGUMENTS);
+        DESCR_(COMP_MANY_ARGUMENTS);
+        DESCR_(COMP_NONE_REGISTER);
+        DESCR_(COMP_ERROR_SYNTAX);
+        DESCR_(COMP_EXPECTED_CONST);
+        DESCR_(COMP_ERROR_IN_ARG);
+        DESCR_(COMP_NONE_LABEL);
+        DESCR_(COMP_ERROR_WRITE);
+        DESCR_(COMP_ERROR_IN_NAME_LABEL);
+    }
+    return "COMP_ERROR_NO";
+    #undef DESCR_
 }
 
 
